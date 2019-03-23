@@ -43,10 +43,10 @@ I've used standard tools described in the docs mentioned above, I'll not dig int
 * android sdk to build simple `TestApp` with code snippets taken from original app to test them out
 
 ## TuyaSmart App v3.8.0
-Below are the findings regarding the internal works of the mentioned app. This might help You reverse-engineer similar apps from Tuya.
+Below are the findings regarding the internal works of the mentioned app. This might help You reverse-engineer similar apps from Tuya. I've also marked some parts of the findings I believe are good (:+1:) or bad (:-1:) security practices.
 
 ### Make app debuggable
-The app has single mechanism to detect if it was repackaged - it checks the hash of certificate it was signed with. The class responsible for computing the hash resides in `smali_classes3/com/tuya/smart/common/oq.smali`.
+The app has simple mechanism to detect if it was repackaged - it checks the hash of certificate it was signed with (:-1: because it's easy to bypass) The class responsible for computing the hash resides in `smali_classes3/com/tuya/smart/common/oq.smali`.
 
 The computed hash is then passed to native library using call `doCommandNative`.
 
@@ -69,8 +69,25 @@ Apart from the change above You can Also try to enable verbose logging (The app 
 * function `isBuildConfigDebug` at `smali/com/tuyasmart/stencil/app/StencilApp.smali`
 
 ### Internal works
-The string to sign is prepared in Java and the algorithm is similar to this described in docs. 
+The string to sign is prepared in Java and the algorithm is similar to this described in docs. The source can be viewed at `smali_classes3/com/tuya/smart/common/ok.smali`.
 
+Sign is generated in native library (`libjnimain.so`). This lib exports only one function to Java (registered dynamically, not exported as symbol). I believe this is intentional to make reverse-engineering harder (:+1:)
+
+```java
+public static native Object doCommandNative(Context var0, int var1, byte[] var2, byte[] var3, byte[] var4, byte[] var5);
+```
+
+The `var1` is the actual function to run:
+0 -> `init(appSecret, clientId, contents_of_bmp_file, certificate_sha256)`
+1 -> `sign(strToSign, null, null, null)` returns signature as `java.lang.String`
+2 -> *some crypto algorithms connected with MQTT, did not check exactly*
+
+Even if there is no `doCommandNative` symbol exported, there are various other symbols present (see `libjnimain.so.symbols.txt` :-1:), especially some some crypto symbols (like: `mbedcrypto_md_hmac_starts`, `mbedcrypto_sha256_starts` which hints which algos are used to compute sign). Setting breakpoints on these functions revealed which algorithm and what input parameters were used for signature generation. (:-1:).
+
+Learning the key used for HMAC-SHA256 algorithm means we can write our own implementation of the signature algorithm. Nevertheless, I was curious how the data was stored in BMP file. I've reverse-engineered the native ARM code (fortunately one of the exported symbols is named `read_keys_from_content` so You know where to look at) and written my own BMP file parser (see below).
+
+## TestApp
+Interesting parts of the code were reimplemented in simple Android app to ease up the debugging and analysis. It's possible to use the `libjnimain.so` in Your app and pass desired params to debug the native code consistently using `gdb`.
 
 # "Secret Key" components
 
