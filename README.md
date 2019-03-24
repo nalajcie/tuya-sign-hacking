@@ -113,11 +113,8 @@ This is by far the most interesting part of the crypto riddle the Tuya gave us.
 
 The key is encoded in BMP file with seemingly random pixels. It turns out Tuya's algorithm does not use standard image stenography approach (storing at most 1-2 bits of information in single pixel which would allow You to hide the token in "normal" image :-1:). Instead they store the whole series of bytes next to each other (the offsets in file are computed from hashed clientId value :+1: - You can see the details on the code). I've made a simple program to extract only the used bytes, You can see the original and only-used part next to each other below (they are enlarged):
 
-<img src="/nalajcie/tuya-sign-hacking/raw/master/read-keys-from-bmp/test.bmp" alt="key file" width="400">
-<img src="/nalajcie/tuya-sign-hacking/raw/master/read-keys-from-bmp/used_pixels.bmp" alt="key file" width="400">
-
-![key file](/read-keys-from-bmp/test.bmp)
-![key file](/read-keys-from-bmp/used_pixels.bmp)
+<img src="/read-keys-from-bmp/test.bmp" alt="key file" width="400" alt="original">
+<img src="/read-keys-from-bmp/used_pixels.bmp" alt="key file" width="400" alt="only used pixels">
 
 This is where things start to look interesting/strange. The bytes read are not the parts of the final key, they are actually pairs of values ![(a_i, b_i)](/doc/coeffs.gif) (one being 6 and other 20 bytes long) which then are being used to create a N x N+1 matrix:
 
