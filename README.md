@@ -111,8 +111,39 @@ openssl x509 -in cert.pem -outform der | sha256sum | tr a-f A-F | sed 's/.\{2\}/
 ## Secret token from the BMP file
 This is by far the most interesting part of the crypto riddle the Tuya gave us.
 
-The key is encoded in BMP file with seemingly random pixels:
+The key is encoded in BMP file with seemingly random pixels. It turns out Tuya's algorithm does not use standard image stenography approach (storing at most 1-2 bits of information in single pixel which would allow You to hide the token in "normal" image :-1:). Instead they store the whole series of bytes next to each other (the offsets in file are computed from hashed clientId value :+1: - You can see the details on the code). I've made a simple program to extract only the used bytes, You can see the original and only-used part next to each other below (they are enlarged):
+
+<img src="/nalajcie/tuya-sign-hacking/raw/master/read-keys-from-bmp/test.bmp" alt="key file" width="400">
+<img src="/nalajcie/tuya-sign-hacking/raw/master/read-keys-from-bmp/used_pixels.bmp" alt="key file" width="400">
+
 ![key file](/read-keys-from-bmp/test.bmp)
+![key file](/read-keys-from-bmp/used_pixels.bmp)
 
+This is where things start to look interesting/strange. The bytes read are not the parts of the final key, they are actually pairs of values ![(a_i, b_i)](/doc/coeffs.gif) (one being 6 and other 20 bytes long) which then are being used to create a N x N+1 matrix:
 
+![\begin{bmatrix}
+ (a_1)^3 & (a_1)^2 & a_1 & 1 &| &b_1 \\
+ (a_2)^3 & (a_2)^2 & a_2 & 1 &| &b_2 \\
+ (a_3)^3 & (a_3)^2 & a_3 & 1 &| &b_3 \\
+ (a_4)^3 & (a_4)^2 & a_4 & 1 &| &b_4 \\
+\end{bmatrix}](/doc/matrix.gif)
 
+Then they use Linear Algebra to reduce the matrix to triangular form:
+
+![\begin{bmatrix}
+ r_1_1 & r_1_2 & r_1_3 & r_1_4 &| & c_1 \\
+ 0     & r_2_2 & r_2_3 & r_2_4 &| & c_2 \\
+ 0     & 0     & r_3_3 & r_3_4 &| & c_3 \\
+ 0     & 0     & 0     & r_4_4 &| & c_4 \\
+\end{bmatrix}](/doc/matrix_triangle.gif)
+
+The final solution is the division ![\frac{c_4}{r_4_4}](/doc/div.gif) - which should reduce to integer - interpreted as a hex string and converted to chars.
+
+The code is quite complex which makes it hard to reverse engineer (:+1:), apart from that I don't see any reason to use linear algebra in here (maybe software developer tasked to implement the crypto really liked matrices :)).
+
+Fortunately as the integer type cannot hold such a big values - and we wanted rational numeric mathematic - Tuya used free big-int library called [imath](https://github.com/creachadair/imath) and left their functions as dynamic symbols making it way easier to understand the code (:-1:).
+
+I've provided the implementation of the above algorithm making it easy to extract the keys just from the disassembled APK file. The BMP file used in TuyaSmart app is in `assets/t_s.bmp` (to make it a *little* bit harder to find, they encoded the filename in base64 in Java source):
+```java
+return new String(Base64.decodeBase64((byte[])"dF9zLmJtcA==".getBytes()));
+```
