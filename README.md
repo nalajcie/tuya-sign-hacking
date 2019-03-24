@@ -78,13 +78,13 @@ public static native Object doCommandNative(Context var0, int var1, byte[] var2,
 ```
 
 The `var1` is the actual function to run:
-0 -> `init(appSecret, clientId, contents_of_bmp_file, certificate_sha256)`
-1 -> `sign(strToSign, null, null, null)` returns signature as `java.lang.String`
-2 -> *some crypto algorithms connected with MQTT, did not check exactly*
+* 0 -> `init(appSecret, clientId, contents_of_bmp_file, certificate_sha256)`
+* 1 -> `sign(strToSign, null, null, null)` returns signature as `java.lang.String`
+* 2 -> *some crypto algorithms connected with MQTT, did not check exactly*
 
 Even if there is no `doCommandNative` symbol exported, there are various other symbols present (see `libjnimain.so.symbols.txt` :-1:), especially some some crypto symbols (like: `mbedcrypto_md_hmac_starts`, `mbedcrypto_sha256_starts` which hints which algos are used to compute sign). Setting breakpoints on these functions revealed which algorithm and what input parameters were used for signature generation. (:-1:).
 
-Learning the key used for HMAC-SHA256 algorithm means we can write our own implementation of the signature algorithm. Nevertheless, I was curious how the data was stored in BMP file. I've reverse-engineered the native ARM code (fortunately one of the exported symbols is named `read_keys_from_content` so You know where to look at) and written my own BMP file parser (see below).
+**Learning the key used for HMAC-SHA256 algorithm means we can write our own implementation of the signature algorithm**. Nevertheless, I was curious how the data was stored in BMP file. I've reverse-engineered the native ARM code (fortunately one of the exported symbols is named `read_keys_from_content` so You know where to look at :-1:) and written my own BMP file parser (see below).
 
 ## TestApp
 Interesting parts of the code were reimplemented in simple Android app to ease up the debugging and analysis. It's possible to use the `libjnimain.so` in Your app and pass desired params to debug the native code consistently using `gdb`.
