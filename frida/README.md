@@ -4,7 +4,7 @@ These scripts allow You to log internal flow of the TuyaSmart App, especially:
 * HTTPS requests - URL + data sent
 * HTTPS responses - data received
 
-The HTTPS flow can be currentely interceped with HTTPS proxy (eg. Anyproxy), because Tuya does not use Certificate Pinnig (:-1:). Even so, using `frida` is more future-proof.
+The HTTPS flow can be currently intercepted with HTTPS proxy (eg. Anyproxy), because Tuya does not use Certificate Pinnig (:-1:). Even so, using `frida` is more future-proof.
 
 ## Usage
 ```bash
