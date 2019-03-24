@@ -109,4 +109,10 @@ openssl x509 -in cert.pem -outform der | sha256sum | tr a-f A-F | sed 's/.\{2\}/
 ```
 
 ## Secret token from the BMP file
+This is by far the most interesting part of the crypto riddle the Tuya gave us.
+
+The key is encoded in BMP file with seemingly random pixels:
+![key file](/read-keys-from-bmp/test.bmp)
+
+
 
